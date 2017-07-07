@@ -124,6 +124,7 @@ type AndroidTestLoop struct {
 type TestMatrix struct {
 	State          string `json:"state"` //"TEST_STATE_UNSPECIFIED","VALIDATING","PENDING","RUNNING","FINISHED","ERROR","UNSUPPORTED_ENVIRONMENT","INCOMPATIBLE_ENVIRONMENT","INCOMPATIBLE_ARCHITECTURE","CANCELLED","INVALID"
 	TestExecutions []struct {
+		State       string `json:"state"`
 		TestDetails struct {
 			ProgressMessages []string `json:"progressMessages"`
 		} `json:"testDetails"`
@@ -463,6 +464,7 @@ func main() {
 						logsPrinted = append(logsPrinted, logSlice)
 					}
 				}
+				log.Printf("[TEST %d] => State: %s", i, execution.State)
 			}
 
 			if finished {
