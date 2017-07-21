@@ -10,8 +10,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 	"time"
 
+	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-tools/go-steputils/input"
 )
@@ -52,9 +54,53 @@ type ListStepsResponse struct {
 	Steps []*Step `json:"steps,omitempty"`
 }
 
+// Outcome ...
+type Outcome struct {
+	FailureDetail      *FailureDetail      `json:"failureDetail,omitempty"`
+	InconclusiveDetail *InconclusiveDetail `json:"inconclusiveDetail,omitempty"`
+	SkippedDetail      *SkippedDetail      `json:"skippedDetail,omitempty"`
+	SuccessDetail      *SuccessDetail      `json:"successDetail,omitempty"`
+	Summary            string              `json:"summary,omitempty"`
+}
+
+// SuccessDetail ...
+type SuccessDetail struct {
+	OtherNativeCrash bool `json:"otherNativeCrash,omitempty"`
+}
+
+// SkippedDetail ...
+type SkippedDetail struct {
+	IncompatibleAppVersion   bool `json:"incompatibleAppVersion,omitempty"`
+	IncompatibleArchitecture bool `json:"incompatibleArchitecture,omitempty"`
+	IncompatibleDevice       bool `json:"incompatibleDevice,omitempty"`
+}
+
+// FailureDetail ...
+type FailureDetail struct {
+	Crashed          bool `json:"crashed,omitempty"`
+	NotInstalled     bool `json:"notInstalled,omitempty"`
+	OtherNativeCrash bool `json:"otherNativeCrash,omitempty"`
+	TimedOut         bool `json:"timedOut,omitempty"`
+	UnableToCrawl    bool `json:"unableToCrawl,omitempty"`
+}
+
+// InconclusiveDetail ...
+type InconclusiveDetail struct {
+	AbortedByUser         bool `json:"abortedByUser,omitempty"`
+	InfrastructureFailure bool `json:"infrastructureFailure,omitempty"`
+}
+
 // Step ...
 type Step struct {
-	State string `json:"state,omitempty"`
+	Outcome        *Outcome                   `json:"outcome,omitempty"`
+	State          string                     `json:"state,omitempty"`
+	DimensionValue []*StepDimensionValueEntry `json:"dimensionValue,omitempty"`
+}
+
+// StepDimensionValueEntry ...
+type StepDimensionValueEntry struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 // AndroidDevice ...
@@ -418,6 +464,7 @@ func main() {
 	log.Infof("Waiting for test results")
 	{
 		finished := false
+		successful := true
 		for !finished {
 			time.Sleep(5 * time.Second)
 
@@ -454,8 +501,78 @@ func main() {
 			}
 
 			if finished {
-				log.Donef("=> TEST FINISHED")
+				log.Donef("=> Test finished")
+				fmt.Println()
+
+				log.Infof("Test results:")
+				w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+				fmt.Fprintln(w, "Model\tAPI Level\tLocale\tOrientation\tOutcome\t")
+
+				for _, step := range responseModel.Steps {
+					dimensions := map[string]string{}
+					for _, dimension := range step.DimensionValue {
+						dimensions[dimension.Key] = dimension.Value
+					}
+
+					outcome := step.Outcome.Summary
+
+					switch outcome {
+					case "success":
+						outcome = colorstring.Green(outcome)
+					case "failure":
+						successful = false
+						if step.Outcome.FailureDetail != nil {
+							if step.Outcome.FailureDetail.Crashed {
+								outcome += "(Crashed)"
+							}
+							if step.Outcome.FailureDetail.NotInstalled {
+								outcome += "(NotInstalled)"
+							}
+							if step.Outcome.FailureDetail.OtherNativeCrash {
+								outcome += "(OtherNativeCrash)"
+							}
+							if step.Outcome.FailureDetail.TimedOut {
+								outcome += "(TimedOut)"
+							}
+							if step.Outcome.FailureDetail.UnableToCrawl {
+								outcome += "(UnableToCrawl)"
+							}
+						}
+						outcome = colorstring.Red(outcome)
+					case "inconclusive":
+						successful = false
+						if step.Outcome.InconclusiveDetail != nil {
+							if step.Outcome.InconclusiveDetail.AbortedByUser {
+								outcome += "(AbortedByUser)"
+							}
+							if step.Outcome.InconclusiveDetail.InfrastructureFailure {
+								outcome += "(InfrastructureFailure)"
+							}
+						}
+						outcome = colorstring.Yellow(outcome)
+					case "skipped":
+						successful = false
+						if step.Outcome.SkippedDetail != nil {
+							if step.Outcome.SkippedDetail.IncompatibleAppVersion {
+								outcome += "(IncompatibleAppVersion)"
+							}
+							if step.Outcome.SkippedDetail.IncompatibleArchitecture {
+								outcome += "(IncompatibleArchitecture)"
+							}
+							if step.Outcome.SkippedDetail.IncompatibleDevice {
+								outcome += "(IncompatibleDevice)"
+							}
+						}
+						outcome = colorstring.Blue(outcome)
+					}
+
+					fmt.Fprintln(w, fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t", dimensions["Model"], dimensions["Version"], dimensions["Locale"], dimensions["Orientation"], outcome))
+				}
+				w.Flush()
 			}
+		}
+		if !successful {
+			os.Exit(1)
 		}
 	}
 }
