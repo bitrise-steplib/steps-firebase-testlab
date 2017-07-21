@@ -47,34 +47,41 @@ type ConfigsModel struct {
 	LoopScenarioLabels string
 }
 
+// ListStepsResponse ...
 type ListStepsResponse struct {
 	Steps []*Step `json:"steps,omitempty"`
 }
 
+// Step ...
 type Step struct {
 	State string `json:"state,omitempty"`
 }
 
+// AndroidDevice ...
 type AndroidDevice struct {
-	AndroidModelId   string `json:"androidModelId,omitempty"`
-	AndroidVersionId string `json:"androidVersionId,omitempty"`
+	AndroidModelID   string `json:"androidModelId,omitempty"`
+	AndroidVersionID string `json:"androidVersionId,omitempty"`
 	Locale           string `json:"locale,omitempty"`
 	Orientation      string `json:"orientation,omitempty"`
 }
 
+// AndroidDeviceList ...
 type AndroidDeviceList struct {
 	AndroidDevices []*AndroidDevice `json:"androidDevices,omitempty"`
 }
 
+// EnvironmentMatrix ...
 type EnvironmentMatrix struct {
 	AndroidDeviceList *AndroidDeviceList `json:"androidDeviceList,omitempty"`
 }
 
+// TestMatrix ...
 type TestMatrix struct {
 	EnvironmentMatrix *EnvironmentMatrix `json:"environmentMatrix,omitempty"`
 	TestSpecification *TestSpecification `json:"testSpecification,omitempty"`
 }
 
+// TestSpecification ...
 type TestSpecification struct {
 	AndroidInstrumentationTest *AndroidInstrumentationTest `json:"androidInstrumentationTest,omitempty"`
 	AndroidRoboTest            *AndroidRoboTest            `json:"androidRoboTest,omitempty"`
@@ -84,62 +91,48 @@ type TestSpecification struct {
 	TestTimeout                string                      `json:"testTimeout,omitempty"`
 }
 
+// AndroidInstrumentationTest ...
 type AndroidInstrumentationTest struct {
-	AppPackageId    string   `json:"appPackageId,omitempty"`
-	TestPackageId   string   `json:"testPackageId,omitempty"`
+	AppPackageID    string   `json:"appPackageId,omitempty"`
+	TestPackageID   string   `json:"testPackageId,omitempty"`
 	TestRunnerClass string   `json:"testRunnerClass,omitempty"`
 	TestTargets     []string `json:"testTargets,omitempty"`
 }
 
+// AndroidRoboTest ...
 type AndroidRoboTest struct {
 	AppInitialActivity string           `json:"appInitialActivity,omitempty"`
-	AppPackageId       string           `json:"appPackageId,omitempty"`
+	AppPackageID       string           `json:"appPackageId,omitempty"`
 	MaxDepth           int64            `json:"maxDepth,omitempty"`
 	MaxSteps           int64            `json:"maxSteps,omitempty"`
 	RoboDirectives     []*RoboDirective `json:"roboDirectives,omitempty"`
 }
 
+// RoboDirective ...
 type RoboDirective struct {
 	ActionType   string `json:"actionType,omitempty"`
 	InputText    string `json:"inputText,omitempty"`
 	ResourceName string `json:"resourceName,omitempty"`
 }
 
+// AndroidTestLoop ...
 type AndroidTestLoop struct {
-	AppPackageId   string   `json:"appPackageId,omitempty"`
+	AppPackageID   string   `json:"appPackageId,omitempty"`
 	ScenarioLabels []string `json:"scenarioLabels,omitempty"`
 	Scenarios      []int64  `json:"scenarios,omitempty"`
 }
 
+// TestSetup ...
 type TestSetup struct {
 	DirectoriesToPull    []string               `json:"directoriesToPull,omitempty"`
 	EnvironmentVariables []*EnvironmentVariable `json:"environmentVariables,omitempty"`
 	NetworkProfile       string                 `json:"networkProfile,omitempty"`
 }
 
+// EnvironmentVariable ...
 type EnvironmentVariable struct {
 	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
-}
-
-// TestExecutionsModel ...
-type TestExecutionsModel []struct {
-	State       string `json:"state"`
-	TestDetails struct {
-		ProgressMessages []string `json:"progressMessages"`
-	} `json:"testDetails"`
-	ToolResultStep struct {
-		ExecutionID string `json:"executionId"`
-	} `json:"toolResultsStep"`
-}
-
-// MatrixSummary ...
-type MatrixSummary struct {
-	ExecutionID string `json:"executionId"`
-	State       string `json:"state"`
-	Outcome     struct {
-		Summary string `json:"summary"`
-	} `json:"outcome"`
 }
 
 // UploadURLRequest ...
@@ -306,8 +299,8 @@ func main() {
 			}
 
 			newDevice := AndroidDevice{
-				AndroidModelId:   deviceParams[0],
-				AndroidVersionId: deviceParams[1],
+				AndroidModelID:   deviceParams[0],
+				AndroidVersionID: deviceParams[1],
 				Locale:           deviceParams[2],
 				Orientation:      deviceParams[3],
 			}
@@ -323,10 +316,10 @@ func main() {
 		case "instrumentation":
 			testModel.TestSpecification.AndroidInstrumentationTest = &AndroidInstrumentationTest{}
 			if configs.AppPackageID != "" {
-				testModel.TestSpecification.AndroidInstrumentationTest.AppPackageId = configs.AppPackageID
+				testModel.TestSpecification.AndroidInstrumentationTest.AppPackageID = configs.AppPackageID
 			}
 			if configs.InstTestPackageID != "" {
-				testModel.TestSpecification.AndroidInstrumentationTest.TestPackageId = configs.InstTestPackageID
+				testModel.TestSpecification.AndroidInstrumentationTest.TestPackageID = configs.InstTestPackageID
 			}
 			if configs.InstTestRunnerClass != "" {
 				testModel.TestSpecification.AndroidInstrumentationTest.TestRunnerClass = configs.InstTestRunnerClass
@@ -338,7 +331,7 @@ func main() {
 		case "robo":
 			testModel.TestSpecification.AndroidRoboTest = &AndroidRoboTest{}
 			if configs.AppPackageID != "" {
-				testModel.TestSpecification.AndroidRoboTest.AppPackageId = configs.AppPackageID
+				testModel.TestSpecification.AndroidRoboTest.AppPackageID = configs.AppPackageID
 			}
 			if configs.RoboInitialActivity != "" {
 				testModel.TestSpecification.AndroidRoboTest.AppInitialActivity = configs.RoboInitialActivity
@@ -378,7 +371,7 @@ func main() {
 		case "gameloop":
 			testModel.TestSpecification.AndroidTestLoop = &AndroidTestLoop{}
 			if configs.AppPackageID != "" {
-				testModel.TestSpecification.AndroidTestLoop.AppPackageId = configs.AppPackageID
+				testModel.TestSpecification.AndroidTestLoop.AppPackageID = configs.AppPackageID
 			}
 			if configs.LoopScenarios != "" {
 				loopScenarios := []int64{}
