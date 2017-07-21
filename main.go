@@ -277,6 +277,7 @@ func main() {
 		log.Donef("=> APKs uploaded")
 	}
 
+	fmt.Println()
 	log.Infof("Start test")
 	{
 		url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug
@@ -413,6 +414,7 @@ func main() {
 		log.Donef("=> Test started")
 	}
 
+	fmt.Println()
 	log.Infof("Waiting for test results")
 	{
 		finished := false
@@ -436,8 +438,6 @@ func main() {
 			if err != nil {
 				failf("Failed to read response body, error: %s", err)
 			}
-
-			log.Warnf("%s", body)
 
 			responseModel := &ListStepsResponse{}
 
