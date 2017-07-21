@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-tools/go-steputils/input"
 )
 
@@ -48,87 +47,99 @@ type ConfigsModel struct {
 	LoopScenarioLabels string
 }
 
-// StartTestResponse ...
-type StartTestResponse struct {
-	Token string `json:"testMatrixId,omitempty"`
+type ListStepsResponse struct {
+	Steps []*Step `json:"steps,omitempty"`
 }
 
-// TestModel ...
-type TestModel struct {
-	EnvironmentMatrix EnvironmentMatrixModel `json:"environmentMatrix,omitempty"`
-	TestSpecification TestSpecificationModel `json:"testSpecification,omitempty"`
+type Step struct {
+	State string `json:"state,omitempty"`
 }
 
-// EnvironmentMatrixModel ...
-type EnvironmentMatrixModel struct {
-	DeviceList *AndroidDevicesList `json:"androidDeviceList,omitempty"`
-}
-
-// AndroidDevicesList ...
-type AndroidDevicesList struct {
-	Devices *[]AndroidDevice `json:"androidDevices,omitempty"`
-}
-
-func (deviceList *AndroidDevicesList) addDevice(device AndroidDevice) {
-	*deviceList.Devices = append(*deviceList.Devices, device)
-}
-
-// AndroidDevice ...
 type AndroidDevice struct {
-	AndroidModelID   string `json:"androidModelId,omitempty"`
-	AndroidVersionID string `json:"androidVersionId,omitempty"`
+	AndroidModelId   string `json:"androidModelId,omitempty"`
+	AndroidVersionId string `json:"androidVersionId,omitempty"`
 	Locale           string `json:"locale,omitempty"`
 	Orientation      string `json:"orientation,omitempty"`
 }
 
-// TestSpecificationModel ...
-type TestSpecificationModel struct {
-	InstrumentationTest *AndroidInstrumentationTest `json:"androidInstrumentationTest,omitempty"`
-	RoboTest            *AndroidRoboTest            `json:"androidRoboTest,omitempty"`
-	TestLoop            *AndroidTestLoop            `json:"androidTestLoop,omitempty"`
-	TestTimeout         string                      `json:"testTimeout,omitempty"`
+type AndroidDeviceList struct {
+	AndroidDevices []*AndroidDevice `json:"androidDevices,omitempty"`
 }
 
-// AndroidInstrumentationTest ...
+type EnvironmentMatrix struct {
+	AndroidDeviceList *AndroidDeviceList `json:"androidDeviceList,omitempty"`
+}
+
+type TestMatrix struct {
+	EnvironmentMatrix *EnvironmentMatrix `json:"environmentMatrix,omitempty"`
+	TestSpecification *TestSpecification `json:"testSpecification,omitempty"`
+}
+
+type TestSpecification struct {
+	AndroidInstrumentationTest *AndroidInstrumentationTest `json:"androidInstrumentationTest,omitempty"`
+	AndroidRoboTest            *AndroidRoboTest            `json:"androidRoboTest,omitempty"`
+	AndroidTestLoop            *AndroidTestLoop            `json:"androidTestLoop,omitempty"`
+	AutoGoogleLogin            bool                        `json:"autoGoogleLogin,omitempty"`
+	TestSetup                  *TestSetup                  `json:"testSetup,omitempty"`
+	TestTimeout                string                      `json:"testTimeout,omitempty"`
+}
+
 type AndroidInstrumentationTest struct {
-	AppPackageID    string   `json:"appPackageId,omitempty"`
-	TestPackageID   string   `json:"testPackageId,omitempty"`
+	AppPackageId    string   `json:"appPackageId,omitempty"`
+	TestPackageId   string   `json:"testPackageId,omitempty"`
 	TestRunnerClass string   `json:"testRunnerClass,omitempty"`
 	TestTargets     []string `json:"testTargets,omitempty"`
 }
 
-// RoboDirective ...
-type RoboDirective struct {
-	ResourceName string `json:"resourceName,omitempty"`
-	InputText    string `json:"inputText,omitempty"`
-	ActionType   string `json:"actionType,omitempty"` //"ACTION_TYPE_UNSPECIFIED","SINGLE_CLICK","ENTER_TEXT"
-}
-
-// AndroidRoboTest ...
 type AndroidRoboTest struct {
-	AppPackageID       string           `json:"appPackageId,omitempty"`
 	AppInitialActivity string           `json:"appInitialActivity,omitempty"`
-	MaxDepth           int32            `json:"maxDepth,omitempty"`
-	MaxSteps           int32            `json:"maxSteps,omitempty"`
-	RoboDirectives     *[]RoboDirective `json:"roboDirectives,omitempty"`
+	AppPackageId       string           `json:"appPackageId,omitempty"`
+	MaxDepth           int64            `json:"maxDepth,omitempty"`
+	MaxSteps           int64            `json:"maxSteps,omitempty"`
+	RoboDirectives     []*RoboDirective `json:"roboDirectives,omitempty"`
 }
 
-// AndroidTestLoop ...
+type RoboDirective struct {
+	ActionType   string `json:"actionType,omitempty"`
+	InputText    string `json:"inputText,omitempty"`
+	ResourceName string `json:"resourceName,omitempty"`
+}
+
 type AndroidTestLoop struct {
-	AppPackageID   string   `json:"appPackageId,omitempty"`
-	Scenarios      []int32  `json:"scenarios,omitempty"`
+	AppPackageId   string   `json:"appPackageId,omitempty"`
 	ScenarioLabels []string `json:"scenarioLabels,omitempty"`
+	Scenarios      []int64  `json:"scenarios,omitempty"`
 }
 
-// TestMatrix ...
-type TestMatrix struct {
-	State          string `json:"state"` //"TEST_STATE_UNSPECIFIED","VALIDATING","PENDING","RUNNING","FINISHED","ERROR","UNSUPPORTED_ENVIRONMENT","INCOMPATIBLE_ENVIRONMENT","INCOMPATIBLE_ARCHITECTURE","CANCELLED","INVALID"
-	TestExecutions []struct {
-		State       string `json:"state"`
-		TestDetails struct {
-			ProgressMessages []string `json:"progressMessages"`
-		} `json:"testDetails"`
-	}
+type TestSetup struct {
+	DirectoriesToPull    []string               `json:"directoriesToPull,omitempty"`
+	EnvironmentVariables []*EnvironmentVariable `json:"environmentVariables,omitempty"`
+	NetworkProfile       string                 `json:"networkProfile,omitempty"`
+}
+
+type EnvironmentVariable struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+// TestExecutionsModel ...
+type TestExecutionsModel []struct {
+	State       string `json:"state"`
+	TestDetails struct {
+		ProgressMessages []string `json:"progressMessages"`
+	} `json:"testDetails"`
+	ToolResultStep struct {
+		ExecutionID string `json:"executionId"`
+	} `json:"toolResultsStep"`
+}
+
+// MatrixSummary ...
+type MatrixSummary struct {
+	ExecutionID string `json:"executionId"`
+	State       string `json:"state"`
+	Outcome     struct {
+		Summary string `json:"summary"`
+	} `json:"outcome"`
 }
 
 // UploadURLRequest ...
@@ -234,8 +245,6 @@ func main() {
 
 	fmt.Println()
 
-	token := ""
-
 	log.Infof("Upload APKs")
 	{
 		url := configs.APIBaseURL + "/assets/" + configs.AppSlug + "/" + configs.BuildSlug
@@ -279,9 +288,9 @@ func main() {
 	{
 		url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug
 
-		testModel := &TestModel{}
-		testModel.EnvironmentMatrix = EnvironmentMatrixModel{DeviceList: &AndroidDevicesList{}}
-		testModel.EnvironmentMatrix.DeviceList.Devices = &[]AndroidDevice{}
+		testModel := &TestMatrix{}
+		testModel.EnvironmentMatrix = &EnvironmentMatrix{AndroidDeviceList: &AndroidDeviceList{}}
+		testModel.EnvironmentMatrix.AndroidDeviceList.AndroidDevices = []*AndroidDevice{}
 
 		scanner := bufio.NewScanner(strings.NewReader(configs.TestDevices))
 		for scanner.Scan() {
@@ -297,59 +306,59 @@ func main() {
 			}
 
 			newDevice := AndroidDevice{
-				AndroidModelID:   deviceParams[0],
-				AndroidVersionID: deviceParams[1],
+				AndroidModelId:   deviceParams[0],
+				AndroidVersionId: deviceParams[1],
 				Locale:           deviceParams[2],
 				Orientation:      deviceParams[3],
 			}
 
-			testModel.EnvironmentMatrix.DeviceList.addDevice(newDevice)
+			testModel.EnvironmentMatrix.AndroidDeviceList.AndroidDevices = append(testModel.EnvironmentMatrix.AndroidDeviceList.AndroidDevices, &newDevice)
 		}
 
-		testModel.TestSpecification = TestSpecificationModel{
+		testModel.TestSpecification = &TestSpecification{
 			TestTimeout: fmt.Sprintf("%ss", configs.TestTimeout),
 		}
 
 		switch configs.TestType {
 		case "instrumentation":
-			testModel.TestSpecification.InstrumentationTest = &AndroidInstrumentationTest{}
+			testModel.TestSpecification.AndroidInstrumentationTest = &AndroidInstrumentationTest{}
 			if configs.AppPackageID != "" {
-				testModel.TestSpecification.InstrumentationTest.AppPackageID = configs.AppPackageID
+				testModel.TestSpecification.AndroidInstrumentationTest.AppPackageId = configs.AppPackageID
 			}
 			if configs.InstTestPackageID != "" {
-				testModel.TestSpecification.InstrumentationTest.TestPackageID = configs.InstTestPackageID
+				testModel.TestSpecification.AndroidInstrumentationTest.TestPackageId = configs.InstTestPackageID
 			}
 			if configs.InstTestRunnerClass != "" {
-				testModel.TestSpecification.InstrumentationTest.TestRunnerClass = configs.InstTestRunnerClass
+				testModel.TestSpecification.AndroidInstrumentationTest.TestRunnerClass = configs.InstTestRunnerClass
 			}
 			if configs.InstTestTargets != "" {
 				targets := strings.Split(strings.TrimSpace(configs.InstTestTargets), ",")
-				testModel.TestSpecification.InstrumentationTest.TestTargets = targets
+				testModel.TestSpecification.AndroidInstrumentationTest.TestTargets = targets
 			}
 		case "robo":
-			testModel.TestSpecification.RoboTest = &AndroidRoboTest{}
+			testModel.TestSpecification.AndroidRoboTest = &AndroidRoboTest{}
 			if configs.AppPackageID != "" {
-				testModel.TestSpecification.RoboTest.AppPackageID = configs.AppPackageID
+				testModel.TestSpecification.AndroidRoboTest.AppPackageId = configs.AppPackageID
 			}
 			if configs.RoboInitialActivity != "" {
-				testModel.TestSpecification.RoboTest.AppInitialActivity = configs.RoboInitialActivity
+				testModel.TestSpecification.AndroidRoboTest.AppInitialActivity = configs.RoboInitialActivity
 			}
 			if configs.RoboMaxDepth != "" {
 				maxDepth, err := strconv.Atoi(configs.RoboMaxDepth)
 				if err != nil {
 					failf("Failed to parse string(%s) to integer, error: %s", configs.RoboMaxDepth, err)
 				}
-				testModel.TestSpecification.RoboTest.MaxDepth = int32(maxDepth)
+				testModel.TestSpecification.AndroidRoboTest.MaxDepth = int64(maxDepth)
 			}
 			if configs.RoboMaxSteps != "" {
 				maxSteps, err := strconv.Atoi(configs.RoboMaxSteps)
 				if err != nil {
 					failf("Failed to parse string(%s) to integer, error: %s", configs.RoboMaxSteps, err)
 				}
-				testModel.TestSpecification.RoboTest.MaxSteps = int32(maxSteps)
+				testModel.TestSpecification.AndroidRoboTest.MaxSteps = int64(maxSteps)
 			}
 			if configs.RoboDirectives != "" {
-				roboDirectives := []RoboDirective{}
+				roboDirectives := []*RoboDirective{}
 				scanner := bufio.NewScanner(strings.NewReader(configs.RoboDirectives))
 				for scanner.Scan() {
 					directive := scanner.Text()
@@ -362,29 +371,29 @@ func main() {
 					if len(directiveParams) != 3 {
 						failf("Invalid directive configuration: %s", directive)
 					}
-					roboDirectives = append(roboDirectives, RoboDirective{ResourceName: directiveParams[0], InputText: directiveParams[1], ActionType: directiveParams[2]})
+					roboDirectives = append(roboDirectives, &RoboDirective{ResourceName: directiveParams[0], InputText: directiveParams[1], ActionType: directiveParams[2]})
 				}
-				testModel.TestSpecification.RoboTest.RoboDirectives = &roboDirectives
+				testModel.TestSpecification.AndroidRoboTest.RoboDirectives = roboDirectives
 			}
 		case "gameloop":
-			testModel.TestSpecification.TestLoop = &AndroidTestLoop{}
+			testModel.TestSpecification.AndroidTestLoop = &AndroidTestLoop{}
 			if configs.AppPackageID != "" {
-				testModel.TestSpecification.TestLoop.AppPackageID = configs.AppPackageID
+				testModel.TestSpecification.AndroidTestLoop.AppPackageId = configs.AppPackageID
 			}
 			if configs.LoopScenarios != "" {
-				loopScenarios := []int32{}
+				loopScenarios := []int64{}
 				for _, scenarioStr := range strings.Split(strings.TrimSpace(configs.LoopScenarios), ",") {
 					scenario, err := strconv.Atoi(scenarioStr)
 					if err != nil {
 						failf("Failed to parse string(%s) to integer, error: %s", scenarioStr, err)
 					}
-					loopScenarios = append(loopScenarios, int32(scenario))
+					loopScenarios = append(loopScenarios, int64(scenario))
 				}
-				testModel.TestSpecification.TestLoop.Scenarios = loopScenarios
+				testModel.TestSpecification.AndroidTestLoop.Scenarios = loopScenarios
 			}
 			if configs.LoopScenarioLabels != "" {
 				scenarioLabels := strings.Split(strings.TrimSpace(configs.LoopScenarioLabels), ",")
-				testModel.TestSpecification.TestLoop.ScenarioLabels = scenarioLabels
+				testModel.TestSpecification.AndroidTestLoop.ScenarioLabels = scenarioLabels
 			}
 		}
 
@@ -404,32 +413,20 @@ func main() {
 			failf("Failed to get http response, error: %s", err)
 		}
 
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			failf("Failed to read response body, error: %s", err)
+		if resp.StatusCode != http.StatusOK {
+			failf("Failed to get http response, status code: %d", resp.StatusCode)
 		}
-
-		responseModel := StartTestResponse{}
-
-		err = json.Unmarshal(body, &responseModel)
-		if err != nil {
-			failf("Failed to unmarshal response body, error: %s", err)
-		}
-
-		token = responseModel.Token
 
 		log.Donef("=> Test started")
 	}
 
 	log.Infof("Waiting for test results")
 	{
-		logsPrinted := []string{}
-
 		finished := false
 		for !finished {
 			time.Sleep(5 * time.Second)
 
-			url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug + "/" + token
+			url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug
 
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
@@ -447,24 +444,20 @@ func main() {
 				failf("Failed to read response body, error: %s", err)
 			}
 
-			responseModel := &TestMatrix{}
+			log.Warnf("%s", body)
+
+			responseModel := &ListStepsResponse{}
 
 			err = json.Unmarshal(body, responseModel)
 			if err != nil {
 				failf("Failed to unmarshal response body, error: %s", err)
 			}
 
-			finished = (responseModel.State == "FINISHED")
-
-			for i, execution := range responseModel.TestExecutions {
-				for _, logContent := range execution.TestDetails.ProgressMessages {
-					logSlice := fmt.Sprintf("[TEST %d] => %s", i, logContent)
-					if !sliceutil.IsStringInSlice(logSlice, logsPrinted) {
-						log.Printf(logSlice)
-						logsPrinted = append(logsPrinted, logSlice)
-					}
+			finished = true
+			for _, step := range responseModel.Steps {
+				if step.State != "complete" {
+					finished = false
 				}
-				log.Printf("[TEST %d] => State: %s", i, execution.State)
 			}
 
 			if finished {
