@@ -15,6 +15,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-tools/go-steputils/input"
 )
 
@@ -465,6 +466,7 @@ func main() {
 	{
 		finished := false
 		successful := true
+		printedLogs := []string{}
 		for !finished {
 			time.Sleep(5 * time.Second)
 
@@ -494,10 +496,18 @@ func main() {
 			}
 
 			finished = true
+			testsRunning := 0
 			for _, step := range responseModel.Steps {
 				if step.State != "complete" {
 					finished = false
+					testsRunning++
 				}
+			}
+
+			msg := fmt.Sprintf("- (%d/%d) running", testsRunning, len(responseModel.Steps))
+			if !sliceutil.IsStringInSlice(msg, printedLogs) {
+				log.Printf(msg)
+				printedLogs = append(printedLogs, msg)
 			}
 
 			if finished {

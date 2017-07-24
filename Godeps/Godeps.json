@@ -8,15 +8,19 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/colorstring",
-			"Rev": "3511af718c64f2ed4e0222e463e5889da972c0a0"
+			"Rev": "2bf26e59ba80fe2a2fd27055b5a4db8e9ec4d1c2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/log",
-			"Rev": "3511af718c64f2ed4e0222e463e5889da972c0a0"
+			"Rev": "2bf26e59ba80fe2a2fd27055b5a4db8e9ec4d1c2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/pathutil",
-			"Rev": "3511af718c64f2ed4e0222e463e5889da972c0a0"
+			"Rev": "2bf26e59ba80fe2a2fd27055b5a4db8e9ec4d1c2"
+		},
+		{
+			"ImportPath": "github.com/bitrise-io/go-utils/sliceutil",
+			"Rev": "2bf26e59ba80fe2a2fd27055b5a4db8e9ec4d1c2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-steputils/input",
