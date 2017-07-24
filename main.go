@@ -490,7 +490,7 @@ func main() {
 
 			err = json.Unmarshal(body, responseModel)
 			if err != nil {
-				failf("Failed to unmarshal response body, error: %s", err)
+				failf("Failed to unmarshal response body, error: %s, body: %s", err, string(body))
 			}
 
 			finished = true
