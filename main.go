@@ -25,6 +25,7 @@ type ConfigsModel struct {
 	APIBaseURL string
 	BuildSlug  string
 	AppSlug    string
+	APIToken   string
 
 	// shared
 	ApkPath      string
@@ -194,6 +195,7 @@ func createConfigsModelFromEnvs() ConfigsModel {
 		APIBaseURL: os.Getenv("api_base_url"),
 		BuildSlug:  os.Getenv("BITRISE_BUILD_SLUG"),
 		AppSlug:    os.Getenv("BITRISE_APP_SLUG"),
+		APIToken:   os.Getenv("api_token"),
 
 		// shared
 		ApkPath:      os.Getenv("apk_path"),
@@ -225,6 +227,7 @@ func (configs ConfigsModel) print() {
 	log.Printf("- APIBaseURL: %s", configs.APIBaseURL)
 	log.Printf("- BuildSlug: %s", configs.BuildSlug)
 	log.Printf("- AppSlug: %s", configs.AppSlug)
+	log.Printf("- APIToken: %s", configs.APIToken)
 	log.Printf("- ApkPath: %s", configs.ApkPath)
 	log.Printf("- TestApkPath: %s", configs.TestApkPath)
 	log.Printf("- TestType: %s", configs.TestType)
@@ -285,9 +288,11 @@ func main() {
 
 	fmt.Println()
 
+	successful := true
+
 	log.Infof("Upload APKs")
 	{
-		url := configs.APIBaseURL + "/assets/" + configs.AppSlug + "/" + configs.BuildSlug
+		url := configs.APIBaseURL + "/assets/" + configs.AppSlug + "/" + configs.BuildSlug + "/" + configs.APIToken
 
 		req, err := http.NewRequest("POST", url, nil)
 		if err != nil {
@@ -298,6 +303,10 @@ func main() {
 		resp, err := client.Do(req)
 		if err != nil {
 			failf("Failed to get http response, error: %s", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			failf("Failed to get http response, status code: %d", resp.StatusCode)
 		}
 
 		body, err := ioutil.ReadAll(resp.Body)
@@ -327,7 +336,7 @@ func main() {
 	fmt.Println()
 	log.Infof("Start test")
 	{
-		url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug
+		url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug + "/" + configs.APIToken
 
 		testModel := &TestMatrix{}
 		testModel.EnvironmentMatrix = &EnvironmentMatrix{AndroidDeviceList: &AndroidDeviceList{}}
@@ -465,12 +474,9 @@ func main() {
 	log.Infof("Waiting for test results")
 	{
 		finished := false
-		successful := true
 		printedLogs := []string{}
 		for !finished {
-			time.Sleep(5 * time.Second)
-
-			url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug
+			url := configs.APIBaseURL + "/" + configs.AppSlug + "/" + configs.BuildSlug + "/" + configs.APIToken
 
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
@@ -502,6 +508,10 @@ func main() {
 					finished = false
 					testsRunning++
 				}
+			}
+
+			if len(responseModel.Steps) == 0 {
+				finished = false
 			}
 
 			msg := fmt.Sprintf("- (%d/%d) running", testsRunning, len(responseModel.Steps))
@@ -580,10 +590,49 @@ func main() {
 				}
 				w.Flush()
 			}
+			if !finished {
+				time.Sleep(5 * time.Second)
+			}
 		}
-		if !successful {
-			os.Exit(1)
+	}
+
+	/*fmt.Println()
+	log.Infof("Downloading test assets")
+	{
+		url := configs.APIBaseURL + "/assets/" + configs.AppSlug + "/" + configs.BuildSlug
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			failf("Failed to create http request, error: %s", err)
 		}
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			failf("Failed to get http response, error: %s", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			failf("Failed to get http response, status code: %d", resp.StatusCode)
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			failf("Failed to read response body, error: %s", err)
+		}
+
+		responseModel := &map[string]string{}
+
+		err = json.Unmarshal(body, responseModel)
+		if err != nil {
+			failf("Failed to unmarshal response body, error: %s", err)
+		}
+
+		log.Donef("=> Assets downloaded")
+	}*/
+
+	if !successful {
+		os.Exit(1)
 	}
 }
 
