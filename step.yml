@@ -119,6 +119,14 @@ inputs:
     opts:
       category: "Debug"
       title: "Maximum time allowed for the tests to run"
+  - download_test_results: false
+    opts:
+      category: "Debug"
+      title: "Do the step should download the test results?"
+      is_required: true
+      value_options:
+        - false
+        - true
   - api_base_url: $ADDON_FIREBASE_API_URL
     opts:
       title: "Test API's base URL"
@@ -135,3 +143,8 @@ inputs:
         The token required to authenticate with the API.
       is_required: true
       is_dont_change_value: true
+outputs:
+  - FIREBASE_TEST_RESULTS_PATH:
+    opts:
+      title: "The directory containing test assets"
+      description: "The directory containing test assets"

@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -15,8 +17,10 @@ import (
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-tools/go-steputils/input"
+	"github.com/bitrise-tools/go-steputils/tools"
 )
 
 // ConfigsModel ...
@@ -28,12 +32,13 @@ type ConfigsModel struct {
 	APIToken   string
 
 	// shared
-	ApkPath      string
-	TestApkPath  string
-	TestType     string
-	TestDevices  string
-	AppPackageID string
-	TestTimeout  string
+	ApkPath             string
+	TestApkPath         string
+	TestType            string
+	TestDevices         string
+	AppPackageID        string
+	TestTimeout         string
+	DownloadTestResults string
 
 	// instrumentation
 	InstTestPackageID   string
@@ -198,12 +203,13 @@ func createConfigsModelFromEnvs() ConfigsModel {
 		APIToken:   os.Getenv("api_token"),
 
 		// shared
-		ApkPath:      os.Getenv("apk_path"),
-		TestApkPath:  os.Getenv("test_apk_path"),
-		TestType:     os.Getenv("test_type"),
-		TestDevices:  os.Getenv("test_devices"),
-		AppPackageID: os.Getenv("app_package_id"),
-		TestTimeout:  os.Getenv("test_timeout"),
+		ApkPath:             os.Getenv("apk_path"),
+		TestApkPath:         os.Getenv("test_apk_path"),
+		TestType:            os.Getenv("test_type"),
+		TestDevices:         os.Getenv("test_devices"),
+		AppPackageID:        os.Getenv("app_package_id"),
+		TestTimeout:         os.Getenv("test_timeout"),
+		DownloadTestResults: os.Getenv("download_test_results"),
 
 		// instrumentation
 		InstTestPackageID:   os.Getenv("inst_test_package_id"),
@@ -510,11 +516,14 @@ func main() {
 				}
 			}
 
+			msg := ""
 			if len(responseModel.Steps) == 0 {
 				finished = false
+				msg = fmt.Sprintf("- Validating")
+			} else {
+				msg = fmt.Sprintf("- (%d/%d) running", testsRunning, len(responseModel.Steps))
 			}
 
-			msg := fmt.Sprintf("- (%d/%d) running", testsRunning, len(responseModel.Steps))
 			if !sliceutil.IsStringInSlice(msg, printedLogs) {
 				log.Printf(msg)
 				printedLogs = append(printedLogs, msg)
@@ -596,44 +605,98 @@ func main() {
 		}
 	}
 
-	/*fmt.Println()
-	log.Infof("Downloading test assets")
-	{
-		url := configs.APIBaseURL + "/assets/" + configs.AppSlug + "/" + configs.BuildSlug
+	if configs.DownloadTestResults == "true" {
+		fmt.Println()
+		log.Infof("Downloading test assets")
+		{
+			url := configs.APIBaseURL + "/assets/" + configs.AppSlug + "/" + configs.BuildSlug + "/" + configs.APIToken
 
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			failf("Failed to create http request, error: %s", err)
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				failf("Failed to create http request, error: %s", err)
+			}
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				failf("Failed to get http response, error: %s", err)
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				failf("Failed to get http response, status code: %d", resp.StatusCode)
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				failf("Failed to read response body, error: %s", err)
+			}
+
+			responseModel := map[string]string{}
+
+			err = json.Unmarshal(body, &responseModel)
+			if err != nil {
+				failf("Failed to unmarshal response body, error: %s", err)
+			}
+
+			tempDir, err := pathutil.NormalizedOSTempDirPath("firebase_test_assets")
+			if err != nil {
+				failf("Failed to create temp dir, error: %s", err)
+			}
+
+			for fileName, fileURL := range responseModel {
+				err := downloadFile(fileURL, filepath.Join(tempDir, fileName))
+				if err != nil {
+					failf("Failed to download file, error: %s", err)
+				}
+			}
+
+			log.Donef("=> Assets downloaded")
+			if err := tools.ExportEnvironmentWithEnvman("FIREBASE_TEST_RESULTS_PATH", tempDir); err != nil {
+				log.Warnf("Failed to export environment (FIREBASE_TEST_RESULTS_PATH), error: %s", err)
+			} else {
+				log.Printf("The downloaded test assets path (%s) is exported to the FIREBASE_TEST_RESULTS_PATH environment variable.", tempDir)
+			}
 		}
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			failf("Failed to get http response, error: %s", err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			failf("Failed to get http response, status code: %d", resp.StatusCode)
-		}
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			failf("Failed to read response body, error: %s", err)
-		}
-
-		responseModel := &map[string]string{}
-
-		err = json.Unmarshal(body, responseModel)
-		if err != nil {
-			failf("Failed to unmarshal response body, error: %s", err)
-		}
-
-		log.Donef("=> Assets downloaded")
-	}*/
+	}
 
 	if !successful {
 		os.Exit(1)
 	}
+}
+
+func downloadFile(url string, localPath string) error {
+	out, err := os.Create(localPath)
+	if err != nil {
+		return fmt.Errorf("Failed to open the local cache file for write: %s", err)
+	}
+	defer func() {
+		if err := out.Close(); err != nil {
+			log.Printf("Failed to close Archive download file (%s): %s", localPath, err)
+		}
+	}()
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("Failed to create cache download request: %s", err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close Archive download response body: %s", err)
+		}
+	}()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Failed to download archive - non success response code: %d", resp.StatusCode)
+	}
+
+	// Writer the body to file
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return fmt.Errorf("Failed to save cache content into file: %s", err)
+	}
+
+	return nil
 }
 
 func _tryToUploadArchive(uploadURL string, archiveFilePath string) error {
