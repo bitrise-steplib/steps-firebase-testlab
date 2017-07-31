@@ -32,13 +32,15 @@ type ConfigsModel struct {
 	APIToken   string
 
 	// shared
-	ApkPath             string
-	TestApkPath         string
-	TestType            string
-	TestDevices         string
-	AppPackageID        string
-	TestTimeout         string
-	DownloadTestResults string
+	ApkPath              string
+	TestApkPath          string
+	TestType             string
+	TestDevices          string
+	AppPackageID         string
+	TestTimeout          string
+	DownloadTestResults  string
+	DirectoriesToPull    string
+	EnvironmentVariables string
 
 	// instrumentation
 	InstTestPackageID   string
@@ -203,13 +205,15 @@ func createConfigsModelFromEnvs() ConfigsModel {
 		APIToken:   os.Getenv("api_token"),
 
 		// shared
-		ApkPath:             os.Getenv("apk_path"),
-		TestApkPath:         os.Getenv("test_apk_path"),
-		TestType:            os.Getenv("test_type"),
-		TestDevices:         os.Getenv("test_devices"),
-		AppPackageID:        os.Getenv("app_package_id"),
-		TestTimeout:         os.Getenv("test_timeout"),
-		DownloadTestResults: os.Getenv("download_test_results"),
+		ApkPath:              os.Getenv("apk_path"),
+		TestApkPath:          os.Getenv("test_apk_path"),
+		TestType:             os.Getenv("test_type"),
+		TestDevices:          os.Getenv("test_devices"),
+		AppPackageID:         os.Getenv("app_package_id"),
+		TestTimeout:          os.Getenv("test_timeout"),
+		DownloadTestResults:  os.Getenv("download_test_results"),
+		DirectoriesToPull:    os.Getenv("directories_to_pull"),
+		EnvironmentVariables: os.Getenv("environment_variables"),
 
 		// instrumentation
 		InstTestPackageID:   os.Getenv("inst_test_package_id"),
@@ -395,6 +399,41 @@ func main() {
 		testModel.TestSpecification = &TestSpecification{
 			TestTimeout: fmt.Sprintf("%ss", configs.TestTimeout),
 		}
+
+		// parse directories to pull
+		scanner = bufio.NewScanner(strings.NewReader(configs.DirectoriesToPull))
+		directoriesToPull := []string{}
+		for scanner.Scan() {
+			path := scanner.Text()
+			path = strings.TrimSpace(path)
+			if path == "" {
+				continue
+			}
+			directoriesToPull = append(directoriesToPull, path)
+		}
+		testModel.TestSpecification.TestSetup.DirectoriesToPull = directoriesToPull
+
+		// parse environment variables
+		scanner = bufio.NewScanner(strings.NewReader(configs.DirectoriesToPull))
+		envs := []*EnvironmentVariable{}
+		for scanner.Scan() {
+			envStr := scanner.Text()
+
+			if envStr == "" {
+				continue
+			}
+
+			if !strings.Contains(envStr, "=") {
+				continue
+			}
+
+			envStrSplit := strings.Split(envStr, "=")
+			envKey := envStrSplit[0]
+			envValue := strings.Join(envStrSplit[1:], "=")
+
+			envs = append(envs, &EnvironmentVariable{Key: envKey, Value: envValue})
+		}
+		testModel.TestSpecification.TestSetup.EnvironmentVariables = envs
 
 		switch configs.TestType {
 		case "instrumentation":
