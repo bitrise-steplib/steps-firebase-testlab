@@ -233,13 +233,34 @@ func (configs ConfigsModel) print() {
 	log.Printf("- APIBaseURL: %s", configs.APIBaseURL)
 	log.Printf("- BuildSlug: %s", configs.BuildSlug)
 	log.Printf("- AppSlug: %s", configs.AppSlug)
-	log.Printf("- APIToken: %s", configs.APIToken)
 	log.Printf("- ApkPath: %s", configs.ApkPath)
-	log.Printf("- TestApkPath: %s", configs.TestApkPath)
-	log.Printf("- TestType: %s", configs.TestType)
-	log.Printf("- AppPackageID: %s", configs.AppPackageID)
+
 	log.Printf("- TestTimeout: %s", configs.TestTimeout)
 	log.Printf("- TestDevices:\n%s", configs.TestDevices)
+	log.Printf("- AppPackageID: %s", configs.AppPackageID)
+	log.Printf("- TestType: %s", configs.TestType)
+
+	// instruments
+	if configs.TestType == "instrumentation" {
+		log.Printf("- TestApkPath: %s", configs.TestApkPath)
+		log.Printf("- InstTestPackageID: %s", configs.InstTestPackageID)
+		log.Printf("- InstTestRunnerClass: %s", configs.InstTestRunnerClass)
+		log.Printf("- InstTestTargets: %s", configs.InstTestTargets)
+	}
+
+	//robo
+	if configs.TestType == "robo" {
+		log.Printf("- RoboInitialActivity: %s", configs.RoboInitialActivity)
+		log.Printf("- RoboMaxDepth: %s", configs.RoboMaxDepth)
+		log.Printf("- RoboMaxSteps: %s", configs.RoboMaxSteps)
+		log.Printf("- RoboDirectives: %s", configs.RoboDirectives)
+	}
+
+	if configs.TestType == "gameloop" {
+		// loop
+		log.Printf("- LoopScenarios: %s", configs.LoopScenarios)
+		log.Printf("- LoopScenarioLabels: %s", configs.LoopScenarioLabels)
+	}
 }
 
 func (configs ConfigsModel) validate() error {
@@ -327,11 +348,11 @@ func main() {
 			failf("Failed to unmarshal response body, error: %s", err)
 		}
 
-		err = _tryToUploadArchive(responseModel.AppURL, configs.ApkPath)
+		err = uploadFile(responseModel.AppURL, configs.ApkPath)
 		if err != nil {
 			failf("Failed to upload file(%s) to (%s), error: %s", configs.ApkPath, responseModel.AppURL, err)
 		}
-		err = _tryToUploadArchive(responseModel.TestAppURL, configs.TestApkPath)
+		err = uploadFile(responseModel.TestAppURL, configs.TestApkPath)
 		if err != nil {
 			failf("Failed to upload file(%s) to (%s), error: %s", configs.TestApkPath, responseModel.TestAppURL, err)
 		}
@@ -699,7 +720,7 @@ func downloadFile(url string, localPath string) error {
 	return nil
 }
 
-func _tryToUploadArchive(uploadURL string, archiveFilePath string) error {
+func uploadFile(uploadURL string, archiveFilePath string) error {
 	archFile, err := os.Open(archiveFilePath)
 	if err != nil {
 		return fmt.Errorf("Failed to open archive file for upload (%s): %s", archiveFilePath, err)
