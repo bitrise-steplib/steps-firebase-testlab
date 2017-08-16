@@ -234,13 +234,32 @@ func createConfigsModelFromEnvs() ConfigsModel {
 
 func (configs ConfigsModel) print() {
 	log.Infof("Configs:")
-	log.Printf("- APIBaseURL: %s", configs.APIBaseURL)
-	log.Printf("- BuildSlug: %s", configs.BuildSlug)
-	log.Printf("- AppSlug: %s", configs.AppSlug)
 	log.Printf("- ApkPath: %s", configs.ApkPath)
 
 	log.Printf("- TestTimeout: %s", configs.TestTimeout)
-	log.Printf("- TestDevices:\n%s", configs.TestDevices)
+	log.Printf("- DirectoriesToPull: %s", configs.DirectoriesToPull)
+	log.Printf("- EnvironmentVariables: %s", configs.EnvironmentVariables)
+	log.Printf("- TestDevices:\n---")
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(w, "Model\tAPI Level\tLocale\tOrientation\t")
+	scanner := bufio.NewScanner(strings.NewReader(configs.TestDevices))
+	for scanner.Scan() {
+		device := scanner.Text()
+		device = strings.TrimSpace(device)
+		if device == "" {
+			continue
+		}
+
+		deviceParams := strings.Split(device, ",")
+
+		if len(deviceParams) != 4 {
+			continue
+		}
+
+		fmt.Fprintln(w, fmt.Sprintf("%s\t%s\t%s\t%s\t", deviceParams[0], deviceParams[1], deviceParams[3], deviceParams[2]))
+	}
+	w.Flush()
+	log.Printf("---")
 	log.Printf("- AppPackageID: %s", configs.AppPackageID)
 	log.Printf("- TestType: %s", configs.TestType)
 
@@ -271,6 +290,9 @@ func (configs ConfigsModel) validate() error {
 
 	if err := input.ValidateIfNotEmpty(configs.APIBaseURL); err != nil {
 		return fmt.Errorf("Issue with APIBaseURL: %s", err)
+	}
+	if err := input.ValidateIfNotEmpty(configs.APIToken); err != nil {
+		return fmt.Errorf("Issue with APIToken: %s", err)
 	}
 	if err := input.ValidateIfNotEmpty(configs.BuildSlug); err != nil {
 		return fmt.Errorf("Issue with BuildSlug: %s", err)
@@ -396,10 +418,6 @@ func main() {
 			testModel.EnvironmentMatrix.AndroidDeviceList.AndroidDevices = append(testModel.EnvironmentMatrix.AndroidDeviceList.AndroidDevices, &newDevice)
 		}
 
-		testModel.TestSpecification = &TestSpecification{
-			TestTimeout: fmt.Sprintf("%ss", configs.TestTimeout),
-		}
-
 		// parse directories to pull
 		scanner = bufio.NewScanner(strings.NewReader(configs.DirectoriesToPull))
 		directoriesToPull := []string{}
@@ -411,7 +429,6 @@ func main() {
 			}
 			directoriesToPull = append(directoriesToPull, path)
 		}
-		testModel.TestSpecification.TestSetup.DirectoriesToPull = directoriesToPull
 
 		// parse environment variables
 		scanner = bufio.NewScanner(strings.NewReader(configs.DirectoriesToPull))
@@ -433,7 +450,14 @@ func main() {
 
 			envs = append(envs, &EnvironmentVariable{Key: envKey, Value: envValue})
 		}
-		testModel.TestSpecification.TestSetup.EnvironmentVariables = envs
+
+		testModel.TestSpecification = &TestSpecification{
+			TestTimeout: fmt.Sprintf("%ss", configs.TestTimeout),
+			TestSetup: &TestSetup{
+				EnvironmentVariables: envs,
+				DirectoriesToPull:    directoriesToPull,
+			},
+		}
 
 		switch configs.TestType {
 		case "instrumentation":
@@ -735,7 +759,6 @@ func downloadFile(url string, localPath string) error {
 		}
 	}()
 
-	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("Failed to create cache download request: %s", err)
@@ -750,7 +773,6 @@ func downloadFile(url string, localPath string) error {
 		return fmt.Errorf("Failed to download archive - non success response code: %d", resp.StatusCode)
 	}
 
-	// Writer the body to file
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
 		return fmt.Errorf("Failed to save cache content into file: %s", err)
