@@ -1,8 +1,10 @@
 # Devices list
 
+To get the latest list of the available devices: update gcloud SDK & run the command below 
+
 > gcloud firebase test android models list
 
-## 2017-08-21
+## Available devices by 2017-08-21
 
 ```
 ┌─────────────┬──────────┬───────────────────────────┬──────────┬─────────────┬────────────────┬
