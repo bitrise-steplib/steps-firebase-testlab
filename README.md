@@ -1,3 +1,5 @@
+**DEPRECATED**: please use https://github.com/bitrise-steplib/steps-virtual-device-testing-for-android instead!
+
 # Firebase TestLab
 
 Run your Android tests using Firebase TestLab, so your tests will run faster and you'll receive more detailed test results.
